@@ -11,15 +11,7 @@ var client = new Minio.Client({
     secretKey: SECRET_KEY
 })
 
-// express is a small HTTP server wrapper, but this works with any HTTP server
 const server = require('express')()
-
-server.get('/presignedUrl', (req, res) => {
-    client.presignedPutObject('smx-play', req.query.name, (err, url) => {
-        if (err) throw err
-        res.end(url)
-    })
-})
 
 server.get('/', (req, res) => {
     res.sendFile(__dirname + '/index.html');
@@ -35,7 +27,6 @@ server.put('/upload',(req, res)=>{
 	    res.redirect(url)
 	})
 })
-
 
 server.listen(8080)
 console.log('http://0.0.0.0:8080')
