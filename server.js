@@ -24,9 +24,19 @@ server.get('/jquery.js', (req, res) => {
 server.put('/upload',(req, res)=>{
 	client.presignedPutObject(req.query.bucket, req.query.name, (err, url) => {
 	    if (err) throw err
-	    res.redirect(url)
+        console.log(url);
+        res.redirect(url)
 	})
 })
+
+
+server.get('/presignedUrl', (req, res) => {
+    client.presignedPutObject('uploads', req.query.name, (err, url) => {
+        if (err) throw err
+        res.end(url)
+    })
+})
+
 
 server.listen(8080)
 console.log('http://0.0.0.0:8080')

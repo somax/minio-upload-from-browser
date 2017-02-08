@@ -1,34 +1,86 @@
-<input type="file" id="selector" multiple>
+Bucket:
+<input type="text" id="bucket" value="smx-play">
+Prefix:
+<input type="text" id="prefix" value="uploads/">
+
+<input type="file" id="file" multiple>
+<!-- <input type="file" id="file"> -->
+<br>
+
+
+<input type="checkbox" id="server-side-redirect">
+<label for="server-side-redirect">Server side redirect</label>
+
+
 <button onclick="upload()">Upload</button>
-
 <div id="status">No uploads</div>
-
 <script src="/jquery.js"></script>
 <script type="text/javascript">
+var $status =  $('#status');
 
- function upload() {
-   [$('#selector')[0].files].forEach(fileObj => {
-     var file = fileObj[0]
+function upload() {
+    var BUCKET = $(bucket).val();
+    var SUB_FOLDER = $(prefix).val();
 
-     console.log('uploading file:',file);
+    [].slice.call($('#file')[0].files).forEach(function(file) {
 
-     uploadFile(file,`/upload?bucket=smx-play&name=${file.name}`);
+            console.log('uploading file:', file);
 
-   })
- }
+            if ($('#server-side-redirect')[0].checked) {
+                uploadFile(file, `/upload?bucket=${BUCKET}&name=${SUB_FOLDER}${file.name}`);
+            } else {
+                // Retrieve a URL from our server.
+                retrieveNewURL(BUCKET, SUB_FOLDER, file, url => {
+                    // Upload the file to the server.
+                    uploadFile(file, url)
+                })
+            }
 
+        })
+}
 
- // Use XMLHttpRequest to upload the file to S3.
- function uploadFile(file, url) {
-     var xhr = new XMLHttpRequest ()
-     xhr.open('PUT', url, true)
-     xhr.send(file)
-     xhr.onload = () => {
-       if (xhr.status == 200) {
-         $('#status').text(`Uploaded ${file.name}.`)
-         console.log('Success!')
-       }
-     }
- }
+// Request to our Node.js server for an upload URL.
+function retrieveNewURL(bucket, path, file, cb) {
+    $status.text('Geting presigned url...');
+    $.get(`/presignedUrl?bucket=${bucket}&name=${path}${file.name}`, (url) => {
+        console.log('Url:', url);
+        cb(url)
+    })
+}
 
+// Use XMLHttpRequest to upload the file to S3.
+function uploadFile(file, url) {
+    var xhr = new XMLHttpRequest()
+    xhr.open('PUT', url, true)
+        // xhr.withCredentials = false
+    xhr.onload = function() {
+        if (xhr.status == 200) {
+            $('#status').text(`Uploaded "${file.name}"  Success!`)
+            console.log(`Upload "${file.name}" Success!`)
+        }
+    }
+    xhr.upload.addEventListener('error', event => {
+        console.error({
+            type: 'danger',
+            message: 'Error occurred uploading \'' + file.name + '\'.'
+        })
+    })
+
+    xhr.upload.addEventListener('progress', event => {
+        if (event.lengthComputable) {
+            let loaded = event.loaded
+            let total = event.total
+
+            $status.text('Uploading... ' + loaded / total * 100 + '%')
+            // Update the counter.
+            console.info({
+                loaded
+            })
+        }
+    })
+
+    xhr.send(file)
+    $status.text('Uploading...');
+
+}
 </script>
